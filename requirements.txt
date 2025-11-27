@@ -1,0 +1,12 @@
+streamlit
+pandas
+numpy
+plotly
+scikit-learn
+xlsxwriter
+gspread
+oauth2client
+google-api-python-client
+openai
+googlemaps
+openpyxl
