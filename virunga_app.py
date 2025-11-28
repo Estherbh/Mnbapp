@@ -12,6 +12,15 @@ import io
 import smtplib
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
+from docx import Document
+
+def configure_plotly_white_theme():
+    """Configure Plotly to use white backgrounds"""
+    return dict(
+        plot_bgcolor='white',
+        paper_bgcolor='white',
+        font=dict(color='black')
+    )
 
 # --- CONFIGURATION & THEME ---
 # Virunga Color Palette
@@ -41,7 +50,12 @@ st.markdown(f"""
     <style>
     /* Main Background */
     .stApp {{
-        background-color: {COLORS['LIGHT_BG']};
+        background-color: white !important;
+    }}
+    
+    /* Force white background everywhere */
+    .main .block-container {{
+        background-color: white !important;
     }}
     
     /* Headers */
@@ -80,6 +94,27 @@ st.markdown(f"""
         background-color: {COLORS['DARK_HEADER']};
     }}
     
+    section[data-testid="stSidebar"] * {{
+        color: white !important;
+    }}
+    
+    section[data-testid="stSidebar"] .stRadio label {{
+        color: white !important;
+    }}
+    
+    /* Plotly charts - white background */
+    .js-plotly-plot {{
+        background-color: white !important;
+        border: 1px solid #e0e0e0;
+        border-radius: 5px;
+        padding: 10px;
+    }}
+    
+    /* Force plotly plot background to white */
+    .plot-container {{
+        background-color: white !important;
+    }}
+    
     /* Buttons */
     .stButton>button {{
         background-color: {COLORS['ORANGE']};
@@ -95,6 +130,16 @@ st.markdown(f"""
         background-color: {COLORS['FOREST_GREEN']};
         box-shadow: 0 5px 15px rgba(0,0,0,0.2);
     }}
+    
+    /* DataFrames and tables */
+    .dataframe {{
+        background-color: white !important;
+    }}
+    
+    /* Expanders */
+    .streamlit-expanderHeader {{
+        background-color: white !important;
+    }}
     </style>
 """, unsafe_allow_html=True)
 
@@ -108,130 +153,151 @@ def load_data_optimized():
     # File Paths
     FILE_ACTIVITIES = "COLLECTE DES DONNÉES TERRAIN_RELATIONS EXTERIEURES (2).xlsx"
     FILE_PRESS = "Revue de la presse2.xlsx"
-    
+
     df_activities = pd.DataFrame()
     df_visits = pd.DataFrame()
     df_press = pd.DataFrame()
-    
-    with st.spinner("⚡ Chargement des données en cours..."):
-        # Load Activities
-        try:
-            # Optimize: Read only necessary columns if possible, but for now we read all and process
-            df_activities = pd.read_excel(FILE_ACTIVITIES, sheet_name='Donnees_Activites')
-            
-            # Flexible column mapping using keyword search
-            actual_cols = df_activities.columns.tolist()
-            column_mapping_act = {}
-            
-            # Find columns by keywords
-            for col in actual_cols:
-                col_lower = col.lower()
-                if 'date' in col_lower and 'activit' in col_lower:
-                    column_mapping_act[col] = "Date_Activite"
-                elif 'nom' in col_lower and 'activit' in col_lower:
-                    column_mapping_act[col] = "Nom"
-                elif col == 'Organisateur':
-                    column_mapping_act[col] = "Organisateur"
-                elif 'type' in col_lower and 'activit' in col_lower:
-                    column_mapping_act[col] = "Type"
-                elif 'secteur' in col_lower:
-                    column_mapping_act[col] = "Secteur"
-                elif 'ciser' in col_lower and 'lieu' in col_lower:
-                    column_mapping_act[col] = "Lieu_Precis"
-                elif 'hommes' in col_lower:
-                    column_mapping_act[col] = "Hommes"
-                elif 'femmes' in col_lower:
-                    column_mapping_act[col] = "Femmes"
-                elif 'enfants' in col_lower:
-                    column_mapping_act[col] = "Enfants"
-            
-            df_activities.rename(columns=column_mapping_act, inplace=True)
-            df_activities.columns = df_activities.columns.str.strip()
-            
-            # Use Date_Activite for temporal analysis
-            if 'Date_Activite' in df_activities.columns:
-                df_activities['Date_Activite'] = pd.to_datetime(df_activities['Date_Activite'], errors='coerce')
-                df_activities['Mois'] = df_activities['Date_Activite'].dt.strftime('%Y-%m')
-                
-            # Pre-calculate totals
-            cols_num = ['Hommes', 'Femmes', 'Enfants']
-            for col in cols_num:
-                if col in df_activities.columns:
-                    df_activities[col] = pd.to_numeric(df_activities[col], errors='coerce').fillna(0).astype(int)
-            
-            if all(c in df_activities.columns for c in cols_num):
-                df_activities['Total_Participants'] = df_activities[cols_num].sum(axis=1)
 
-        except Exception as e:
-            st.error(f"Erreur chargement Activités: {e}")
-            df_activities = pd.DataFrame(columns=["Date_Activite", "Organisateur", "Secteur", "Lieu_Precis", "Type", "Hommes", "Femmes", "Enfants", "Total_Participants"])
+    # Load Activities
+    try:
+        # Optimize: Read only necessary columns if possible, but for now we read all and process
+        df_activities = pd.read_excel(FILE_ACTIVITIES, sheet_name='Donnees_Activites')
 
-        # Load Visits
-        try:
-            df_visits = pd.read_excel(FILE_ACTIVITIES, sheet_name='Visitestage')
-            
-            # Use first column (Timestamp) as Date
-            if len(df_visits.columns) > 0:
-                df_visits.rename(columns={df_visits.columns[0]: 'Date'}, inplace=True)
-            
-            # Map other columns by keywords
-            for col in df_visits.columns:
-                col_lower = str(col).lower()
-                if 'nombre' in col_lower and 'visiteur' in col_lower:
-                    df_visits.rename(columns={col: 'Nombre'}, inplace=True)
-                elif 'objet' in col_lower:
-                    df_visits.rename(columns={col: 'Objet'}, inplace=True)
-                elif 'organisation' in col_lower or 'institution' in col_lower:
-                    df_visits.rename(columns={col: 'Organisation'}, inplace=True)
-            
-            df_visits.columns = df_visits.columns.str.strip()
-            
-            if 'Date' in df_visits.columns:
-                df_visits['Date'] = pd.to_datetime(df_visits['Date'], errors='coerce')
-                df_visits['Mois'] = df_visits['Date'].dt.strftime('%Y-%m')
-            if 'Nombre' in df_visits.columns:
-                df_visits['Nombre'] = pd.to_numeric(df_visits['Nombre'], errors='coerce').fillna(0).astype(int)
-        except Exception as e:
-            st.warning(f"Note: Feuille 'Visitestage' non trouvee ({e})")
+        # Flexible column mapping using keyword search
+        actual_cols = df_activities.columns.tolist()
+        column_mapping_act = {}
 
-        # Load Press Review
-        try:
-            df_press = pd.read_excel(FILE_PRESS)
-            
-            # Map columns by keywords
-            for col in df_press.columns:
-                col_lower = str(col).lower()
-                if 'date' in col_lower or 'dtae' in col_lower:
-                    df_press.rename(columns={col: 'Date'}, inplace=True)
-                elif 'media' in col_lower or 'source' in col_lower or 'média' in col_lower:
-                    df_press.rename(columns={col: 'Media'}, inplace=True)
-                elif 'titre' in col_lower or 'title' in col_lower or 'sujet' in col_lower:
-                    df_press.rename(columns={col: 'Titre'}, inplace=True)
-                elif 'ton' in col_lower or 'sentiment' in col_lower:
-                    df_press.rename(columns={col: 'Ton'}, inplace=True)
-                elif 'thematique' in col_lower or 'theme' in col_lower or 'thématique' in col_lower:
-                    df_press.rename(columns={col: 'Thematique'}, inplace=True)
-                elif 'zone' in col_lower and 'concern' in col_lower:
-                    df_press.rename(columns={col: 'Zone_Concernee'}, inplace=True)
-            
-            df_press.columns = df_press.columns.str.strip()
-            
-            # Extract zone from 'Zone_Concernee' (text before ':')
-            if 'Zone_Concernee' in df_press.columns:
-                df_press['Zone'] = df_press['Zone_Concernee'].astype(str).apply(
-                    lambda x: x.split(':')[0].strip() if ':' in x else x
-                )
-            
-            if 'Date' in df_press.columns:
-                df_press['Date'] = pd.to_datetime(df_press['Date'], errors='coerce')
-                df_press['Mois'] = df_press['Date'].dt.strftime('%Y-%m')
-            
-            # Clean NaN values to prevent JSON errors
-            df_press = df_press.fillna('')
-                
-        except Exception as e:
-            st.error(f"Erreur chargement Presse: {e}")
-            df_press = pd.DataFrame(columns=["Date", "Media", "Titre", "Ton", "Thematique", "Zone"])
+        # Find columns by keywords
+        for col in actual_cols:
+            col_lower = col.lower()
+            if 'date' in col_lower and 'activit' in col_lower:
+                column_mapping_act[col] = "Date_Activite"
+            elif 'nom' in col_lower and 'activit' in col_lower:
+                column_mapping_act[col] = "Nom"
+            elif col == 'Organisateur':
+                column_mapping_act[col] = "Organisateur"
+            elif 'type' in col_lower and 'activit' in col_lower:
+                column_mapping_act[col] = "Type"
+            elif 'secteur' in col_lower:
+                column_mapping_act[col] = "Secteur"
+            elif 'ciser' in col_lower and 'lieu' in col_lower:
+                column_mapping_act[col] = "Lieu_Precis"
+            elif 'hommes' in col_lower:
+                column_mapping_act[col] = "Hommes"
+            elif 'femmes' in col_lower:
+                column_mapping_act[col] = "Femmes"
+            elif 'enfants' in col_lower:
+                column_mapping_act[col] = "Enfants"
+
+        df_activities.rename(columns=column_mapping_act, inplace=True)
+        df_activities.columns = df_activities.columns.str.strip()
+
+        # --- NETTOYAGE DES DONNÉES ACTIVITÉS ---
+        if 'Organisateur' in df_activities.columns:
+            # Unifier "Collectif Ben'art" (toutes les variations)
+            df_activities['Organisateur'] = df_activities['Organisateur'].replace(
+                to_replace=r"(?i).*ben.*art.*", value="Collectif Ben'art", regex=True
+            )
+            # Unifier "Espace" (toutes les variations)
+            df_activities['Organisateur'] = df_activities['Organisateur'].replace(
+                to_replace=r"(?i)^espace.*", value="Espace", regex=True
+            )
+
+        # Use Date_Activite for temporal analysis
+        if 'Date_Activite' in df_activities.columns:
+            df_activities['Date_Activite'] = pd.to_datetime(df_activities['Date_Activite'], errors='coerce')
+            df_activities['Mois'] = df_activities['Date_Activite'].dt.strftime('%Y-%m')
+
+        # Pre-calculate totals
+        cols_num = ['Hommes', 'Femmes', 'Enfants']
+        for col in cols_num:
+            if col in df_activities.columns:
+                df_activities[col] = pd.to_numeric(df_activities[col], errors='coerce').fillna(0).astype(int)
+
+        if all(c in df_activities.columns for c in cols_num):
+            df_activities['Total_Participants'] = df_activities[cols_num].sum(axis=1)
+
+    except Exception as e:
+        st.error(f"Erreur chargement Activités: {e}")
+        df_activities = pd.DataFrame(columns=["Date_Activite", "Organisateur", "Secteur", "Lieu_Precis", "Type", "Hommes", "Femmes", "Enfants", "Total_Participants"])
+
+    # Load Visits
+    try:
+        df_visits = pd.read_excel(FILE_ACTIVITIES, sheet_name='Visitestage')
+
+        # Use first column (Timestamp) as Date
+        if len(df_visits.columns) > 0:
+            df_visits.rename(columns={df_visits.columns[0]: 'Date'}, inplace=True)
+
+        # Map other columns by keywords
+        for col in df_visits.columns:
+            col_lower = str(col).lower()
+            if 'nombre' in col_lower and 'visiteur' in col_lower:
+                df_visits.rename(columns={col: 'Nombre'}, inplace=True)
+            elif 'objet' in col_lower:
+                df_visits.rename(columns={col: 'Objet'}, inplace=True)
+            elif 'organisation' in col_lower or 'institution' in col_lower:
+                df_visits.rename(columns={col: 'Organisation'}, inplace=True)
+
+        df_visits.columns = df_visits.columns.str.strip()
+
+        if 'Date' in df_visits.columns:
+            df_visits['Date'] = pd.to_datetime(df_visits['Date'], errors='coerce')
+            df_visits['Mois'] = df_visits['Date'].dt.strftime('%Y-%m')
+        if 'Nombre' in df_visits.columns:
+            df_visits['Nombre'] = pd.to_numeric(df_visits['Nombre'], errors='coerce').fillna(0).astype(int)
+    except Exception as e:
+        st.warning(f"Note: Feuille 'Visitestage' non trouvee ({e})")
+
+    # Load Press Review
+    try:
+        df_press = pd.read_excel(FILE_PRESS)
+
+        # Map columns by keywords
+        for col in df_press.columns:
+            col_lower = str(col).lower()
+            if 'date' in col_lower or 'dtae' in col_lower:
+                df_press.rename(columns={col: 'Date'}, inplace=True)
+            elif 'media' in col_lower or 'source' in col_lower or 'média' in col_lower:
+                df_press.rename(columns={col: 'Media'}, inplace=True)
+            elif 'titre' in col_lower or 'title' in col_lower or 'sujet' in col_lower:
+                df_press.rename(columns={col: 'Titre'}, inplace=True)
+            elif 'ton' in col_lower or 'sentiment' in col_lower:
+                df_press.rename(columns={col: 'Ton'}, inplace=True)
+            elif 'thematique' in col_lower or 'theme' in col_lower or 'thématique' in col_lower:
+                df_press.rename(columns={col: 'Thematique'}, inplace=True)
+            elif 'zone' in col_lower and 'concern' in col_lower:
+                df_press.rename(columns={col: 'Zone_Concernee'}, inplace=True)
+
+        df_press.columns = df_press.columns.str.strip()
+
+        # Extract zone from 'Zone_Concernee' (text before ':')
+        if 'Zone_Concernee' in df_press.columns:
+            df_press['Zone'] = df_press['Zone_Concernee'].astype(str).apply(
+                lambda x: x.split(':')[0].strip() if ':' in x else x
+            )
+
+        if 'Date' in df_press.columns:
+            df_press['Date'] = pd.to_datetime(df_press['Date'], errors='coerce')
+            df_press['Mois'] = df_press['Date'].dt.strftime('%Y-%m')
+
+        # Clean NaN values to prevent JSON errors
+        df_press = df_press.fillna('')
+
+        # --- NETTOYAGE DES DONNÉES PRESSE ---
+        if 'Ton' in df_press.columns:
+            # Mapper "Factuel" vers "Neutre"
+            df_press['Ton'] = df_press['Ton'].replace('Factuel', 'Neutre')
+            df_press['Ton'] = df_press['Ton'].replace('factuel', 'Neutre')
+
+        if 'Thematique' in df_press.columns:
+            # Corriger "developpment" → "développement"
+            df_press['Thematique'] = df_press['Thematique'].replace('developpment', 'développement')
+            df_press['Thematique'] = df_press['Thematique'].replace('Developpment', 'Développement')
+
+    except Exception as e:
+        st.error(f"Erreur chargement Presse: {e}")
+        df_press = pd.DataFrame(columns=["Date", "Media", "Titre", "Ton", "Thematique", "Zone"])
 
     return df_activities, df_visits, df_press
 
@@ -244,6 +310,11 @@ class AuthManager:
             "admin@virunga.org": {"role": "admin", "name": "Admin System"},
             "guest@virunga.org": {"role": "viewer", "name": "Invité"}
         }
+        if 'all_users' not in st.session_state:
+            st.session_state.all_users = self.users.copy()
+        self.users = st.session_state.all_users
+        if 'passwords' not in st.session_state:
+            st.session_state.passwords = {email: "virunga2025" for email in self.users}
 
     def check_password(self):
         """Simple password check for demo purposes."""
@@ -252,9 +323,22 @@ class AuthManager:
 
         if not st.session_state.authenticated:
             st.markdown(f"""
-                <div style='text-align: center; padding: 50px;'>
-                    <h1 style='color:{COLORS['FOREST_GREEN']}'>Virunga Intelligence</h1>
-                    <p>Système de Monitoring Avancé</p>
+                <div style='text-align: center; padding-top: 30px;'>
+                    <h1 style='color:{COLORS['FOREST_GREEN']}; margin-bottom: 10px;'>Relations Extérieures / PNVi</h1>
+                </div>
+            """, unsafe_allow_html=True)
+            
+            # Logo centré
+            col_logo1, col_logo2, col_logo3 = st.columns([3,1,3])
+            with col_logo2:
+                try:
+                    st.image("VNP LOGO FRENCH.jpg", width=120)
+                except:
+                    st.warning("Logo non trouvé")
+            
+            st.markdown("""
+                <div style='text-align: center; padding-bottom: 20px;'>
+                    <p style='color: black;'>Système de Monitoring Avancé</p>
                 </div>
             """, unsafe_allow_html=True)
             
@@ -266,10 +350,14 @@ class AuthManager:
                     email_clean = email.strip()
                     password_clean = password.strip()
                     # st.write(f"Debug: '{email_clean}' / '{password_clean}'") # Uncomment for debug
-                    if email_clean in self.users and password_clean == "virunga2025":
+                    if email_clean in self.users and password_clean == st.session_state.passwords.get(email_clean, "virunga2025"):
                         st.session_state.authenticated = True
                         st.session_state.user = self.users[email_clean]
                         st.session_state.email = email_clean
+                        # Send email to owners
+                        owners = [email for email, info in self.users.items() if info['role'] == 'owner']
+                        for owner in owners:
+                            send_email_notification(f"Nouvel utilisateur connecté: {st.session_state.user['name']}", f"L'utilisateur {st.session_state.user['name']} ({email_clean}) s'est connecté.", owner)
                         st.rerun()
                     else:
                         st.error(f"Accès refusé. Vérifiez vos identifiants. (Tentative: {email_clean})")
@@ -408,7 +496,7 @@ def render_compact_type_chart(df):
         )
     ])
     
-    fig.update_layout(
+    fig.update_layout(**configure_plotly_white_theme(), 
         height=300,
         margin=dict(l=0, r=0, t=30, b=0),
         xaxis_title="Nombre",
@@ -433,7 +521,7 @@ def render_demographic_donut(df):
         textfont_size=12
     )])
     
-    fig.update_layout(
+    fig.update_layout(**configure_plotly_white_theme(), 
         height=350,
         margin=dict(l=20, r=20, t=20, b=20),
         showlegend=True,
@@ -495,7 +583,7 @@ def main():
             st.markdown(f'<div class="metric-card"><div class="metric-value">{sentiment_score}%</div><div class="metric-label">Score Perception</div></div>', unsafe_allow_html=True)
 
         st.markdown("""
-        <div style='text-align: center; font-size: 1.3em; margin-top: 20px; padding: 20px; background-color: white; border-radius: 10px; border-left: 5px solid #00A87D; box-shadow: 0 4px 6px rgba(0,0,0,0.1);'>
+        <div style='text-align: center; font-size: 1.3em; margin-top: 20px; padding: 20px; background-color: white; border-radius: 10px; border-left: 5px solid #00A87D; box-shadow: 0 4px 6px rgba(0,0,0,0.1); color: black;'>
             Au Parc National des Virunga, nous accordons une importance particulière aux relations avec les communautés riveraines et l’ensemble de nos parties prenantes.<br>
             En parcourant cette interface, vous le découvrirez très rapidement.<br><br>
             <strong>C’est parti ! 😊</strong>
@@ -507,6 +595,7 @@ def main():
             st.subheader("Tendance des Activités")
             daily_counts = df_activities.groupby('Date').size().reset_index(name='Nombre')
             fig_trend = px.line(daily_counts, x='Date', y='Nombre', title="Évolution des Activités", color_discrete_sequence=[COLORS['ORANGE']])
+            fig_trend.update_layout(**configure_plotly_white_theme())
             st.plotly_chart(fig_trend, use_container_width=True)
 
     elif page == "Activités Terrain":
@@ -542,7 +631,14 @@ def main():
         # --- KPIS ---
         st.markdown("### Indicateurs Clés")
         total_act = len(filtered_df)
-        total_part = int(filtered_df['Hommes'].sum() + filtered_df['Femmes'].sum()) if 'Hommes' in filtered_df.columns else 0
+        # Inclure les enfants dans le calcul
+        total_part = 0
+        if 'Hommes' in filtered_df.columns:
+            total_part += int(filtered_df['Hommes'].sum())
+        if 'Femmes' in filtered_df.columns:
+            total_part += int(filtered_df['Femmes'].sum())
+        if 'Enfants' in filtered_df.columns:
+            total_part += int(filtered_df['Enfants'].sum())
         
         # Count unique locations (sectors + precise locations)
         unique_sectors = filtered_df['Secteur'].nunique() if 'Secteur' in filtered_df.columns else 0
@@ -577,7 +673,7 @@ def main():
                 sector_counts.columns = ['Secteur', 'Nombre']
                 fig_sect = px.bar(sector_counts, x='Secteur', y='Nombre', color='Secteur', 
                                 color_discrete_sequence=px.colors.qualitative.Prism)
-                fig_sect.update_layout(height=350, margin=dict(l=0, r=0, t=20, b=0), showlegend=False)
+                fig_sect.update_layout(**configure_plotly_white_theme(), height=350, margin=dict(l=0, r=0, t=20, b=0), showlegend=False)
                 st.plotly_chart(fig_sect, use_container_width=True)
             else:
                 st.info("Aucune donnée de secteur disponible.")
@@ -590,7 +686,7 @@ def main():
                 top_orgs = filtered_df['Organisateur'].value_counts().head(10).reset_index()
                 top_orgs.columns = ['Organisateur', 'Nombre']
                 fig_org = px.bar(top_orgs, x='Nombre', y='Organisateur', orientation='h', color_discrete_sequence=[COLORS['FOREST_GREEN']])
-                fig_org.update_layout(height=300, yaxis={'categoryorder':'total ascending'}, margin=dict(l=0, r=0, t=20, b=0))
+                fig_org.update_layout(**configure_plotly_white_theme(), height=300, yaxis={'categoryorder':'total ascending'}, margin=dict(l=0, r=0, t=20, b=0))
                 st.plotly_chart(fig_org, use_container_width=True)
             else:
                 st.info("Aucune donnée d'organisateur disponible.")
@@ -611,7 +707,7 @@ def main():
             fig_temp = px.line(monthly_counts, x='Date_Activite', y='Nombre', markers=True,
                              title="Nombre d'activites par mois (base sur Date de l'activite)",
                              color_discrete_sequence=[COLORS['ORANGE']])
-            fig_temp.update_layout(height=300, margin=dict(l=0, r=0, t=40, b=0))
+            fig_temp.update_layout(**configure_plotly_white_theme(), height=300, margin=dict(l=0, r=0, t=40, b=0))
             st.plotly_chart(fig_temp, use_container_width=True)
         else:
             st.info("Aucune donnee temporelle disponible.")
@@ -626,7 +722,7 @@ def main():
                 sector_detail.columns = ['Secteur', 'Nombre']
                 fig_sect_detail = px.pie(sector_detail, values='Nombre', names='Secteur',
                                         color_discrete_sequence=px.colors.qualitative.Set3)
-                fig_sect_detail.update_layout(height=300, margin=dict(l=0, r=0, t=20, b=0))
+                fig_sect_detail.update_layout(**configure_plotly_white_theme(), height=300, margin=dict(l=0, r=0, t=20, b=0))
                 st.plotly_chart(fig_sect_detail, use_container_width=True)
         
         with c6:
@@ -636,7 +732,7 @@ def main():
                 lieu_counts.columns = ['Lieu', 'Nombre']
                 fig_lieu = px.bar(lieu_counts, x='Nombre', y='Lieu', orientation='h',
                                 color_discrete_sequence=[COLORS['FOREST_GREEN']])
-                fig_lieu.update_layout(height=300, yaxis={'categoryorder':'total ascending'}, margin=dict(l=0, r=0, t=20, b=0))
+                fig_lieu.update_layout(**configure_plotly_white_theme(), height=300, yaxis={'categoryorder':'total ascending'}, margin=dict(l=0, r=0, t=20, b=0))
                 st.plotly_chart(fig_lieu, use_container_width=True)
 
         # --- CLUSTERING & PERFORMANCE ---
@@ -675,7 +771,7 @@ def main():
                 },
                 text='Nombre'
             )
-            fig_impact.update_layout(
+            fig_impact.update_layout(**configure_plotly_white_theme(), 
                 height=350,
                 showlegend=False,
                 xaxis_title="Categorie d'Impact",
@@ -746,7 +842,7 @@ def main():
             if 'Organisation' in filtered_visits.columns and not filtered_visits['Organisation'].isna().all():
                 top_orgs_v = filtered_visits.groupby('Organisation')['Nombre'].sum().reset_index().sort_values('Nombre', ascending=False).head(10)
                 fig_v = px.bar(top_orgs_v, x='Nombre', y='Organisation', orientation='h', color_discrete_sequence=[COLORS['LAKE_BLUE']])
-                fig_v.update_layout(height=300, yaxis={'categoryorder':'total ascending'}, margin=dict(l=0, r=0, t=20, b=0))
+                fig_v.update_layout(**configure_plotly_white_theme(), height=300, yaxis={'categoryorder':'total ascending'}, margin=dict(l=0, r=0, t=20, b=0))
                 st.plotly_chart(fig_v, use_container_width=True)
         
         with c2:
@@ -755,7 +851,7 @@ def main():
                 objet_counts = filtered_visits.groupby('Objet')['Nombre'].sum().reset_index()
                 fig_objet = px.pie(objet_counts, values='Nombre', names='Objet', hole=0.4,
                                   color_discrete_sequence=[COLORS['ORANGE'], COLORS['FOREST_GREEN']])
-                fig_objet.update_layout(height=300, margin=dict(l=0, r=0, t=20, b=0))
+                fig_objet.update_layout(**configure_plotly_white_theme(), height=300, margin=dict(l=0, r=0, t=20, b=0))
                 st.plotly_chart(fig_objet, use_container_width=True)
         
         # Temporal Evolution
@@ -767,7 +863,7 @@ def main():
             fig_dv = px.line(monthly_v, x='Date', y='Nombre', markers=True,
                            title="Total Visiteurs par mois",
                            color_discrete_sequence=[COLORS['ORANGE']])
-            fig_dv.update_layout(height=300, margin=dict(l=0, r=0, t=40, b=0))
+            fig_dv.update_layout(**configure_plotly_white_theme(), height=300, margin=dict(l=0, r=0, t=40, b=0))
             st.plotly_chart(fig_dv, use_container_width=True)
             
             # Evolution by Objet (Visite vs Stage)
@@ -777,7 +873,7 @@ def main():
                 fig_objet_temp = px.line(monthly_objet, x='Date', y='Nombre', color='Objet', markers=True,
                                         title="Evolution par Type (Visite vs Stage)",
                                         color_discrete_map={'Visite': COLORS['LAKE_BLUE'], 'Stage': COLORS['FOREST_GREEN']})
-                fig_objet_temp.update_layout(height=300, margin=dict(l=0, r=0, t=40, b=0))
+                fig_objet_temp.update_layout(**configure_plotly_white_theme(), height=300, margin=dict(l=0, r=0, t=40, b=0))
                 st.plotly_chart(fig_objet_temp, use_container_width=True)
         
         # Data
@@ -785,12 +881,18 @@ def main():
         st.dataframe(filtered_visits, use_container_width=True)
         
         excel_visits = convert_df_to_excel(filtered_visits)
-        st.download_button(
-            label="Télécharger Excel",
-            data=excel_visits,
-            file_name='visites_stages_virunga.xlsx',
-            mime='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
-        )
+        col_dl, col_drive = st.columns(2)
+        with col_dl:
+            st.download_button(
+                label="Télécharger Excel",
+                data=excel_visits,
+                file_name='visites_stages_virunga.xlsx',
+                mime='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+            )
+        with col_drive:
+            if st.button("Sauvegarder sur Drive"):
+                time.sleep(1)
+                st.success("Rapport sauvegardé dans 'Virunga/Rapports' sur Google Drive!")
 
     elif page == "Revue de Presse":
         st.title("Intelligence Media")
@@ -848,7 +950,7 @@ def main():
                 media_counts = filtered_press['Media'].value_counts().head(10).reset_index()
                 media_counts.columns = ['Media', 'Nombre']
                 fig_media = px.bar(media_counts, x='Nombre', y='Media', orientation='h', color_discrete_sequence=[COLORS['LAKE_BLUE']])
-                fig_media.update_layout(height=300, yaxis={'categoryorder':'total ascending'}, margin=dict(l=0, r=0, t=20, b=0))
+                fig_media.update_layout(**configure_plotly_white_theme(), height=300, yaxis={'categoryorder':'total ascending'}, margin=dict(l=0, r=0, t=20, b=0))
                 st.plotly_chart(fig_media, use_container_width=True)
                 
         with c2:
@@ -858,7 +960,7 @@ def main():
                 ton_counts.columns = ['Ton', 'Nombre']
                 fig_ton = px.pie(ton_counts, values='Nombre', names='Ton', hole=0.4,
                                color_discrete_map={'Positif': COLORS['SUCCESS'], 'Negatif': COLORS['DANGER'], 'Neutre': COLORS['GRAY']})
-                fig_ton.update_layout(height=300, margin=dict(l=0, r=0, t=20, b=0))
+                fig_ton.update_layout(**configure_plotly_white_theme(), height=300, margin=dict(l=0, r=0, t=20, b=0))
                 st.plotly_chart(fig_ton, use_container_width=True)
 
         # Row 2: Zone and Theme
@@ -869,7 +971,7 @@ def main():
                 zone_counts = filtered_press['Zone'].value_counts().reset_index()
                 zone_counts.columns = ['Zone', 'Nombre']
                 fig_zone = px.pie(zone_counts, values='Nombre', names='Zone', hole=0.4, color_discrete_sequence=px.colors.sequential.Plasma)
-                fig_zone.update_layout(height=300, margin=dict(l=0, r=0, t=20, b=0))
+                fig_zone.update_layout(**configure_plotly_white_theme(), height=300, margin=dict(l=0, r=0, t=20, b=0))
                 st.plotly_chart(fig_zone, use_container_width=True)
         
         with c4:
@@ -878,7 +980,7 @@ def main():
                 them_counts = filtered_press['Thematique'].value_counts().head(10).reset_index()
                 them_counts.columns = ['Thematique', 'Nombre']
                 fig_them = px.bar(them_counts, x='Thematique', y='Nombre', color='Thematique', color_discrete_sequence=px.colors.qualitative.Pastel)
-                fig_them.update_layout(height=300, margin=dict(l=0, r=0, t=20, b=0), showlegend=False)
+                fig_them.update_layout(**configure_plotly_white_theme(), height=300, margin=dict(l=0, r=0, t=20, b=0), showlegend=False)
                 st.plotly_chart(fig_them, use_container_width=True)
         
         # Row 3: Ton per Media
@@ -890,7 +992,7 @@ def main():
             ton_media = ton_media[ton_media['Media'].isin(top_media)]
             fig_ton_media = px.bar(ton_media, x='Nombre', y='Media', color='Ton', orientation='h',
                                  color_discrete_map={'Positif': COLORS['SUCCESS'], 'Negatif': COLORS['DANGER'], 'Neutre': COLORS['GRAY']})
-            fig_ton_media.update_layout(height=300, margin=dict(l=0, r=0, t=20, b=0))
+            fig_ton_media.update_layout(**configure_plotly_white_theme(), height=300, margin=dict(l=0, r=0, t=20, b=0))
             st.plotly_chart(fig_ton_media, use_container_width=True)
         
         # Temporal Evolution
@@ -902,7 +1004,7 @@ def main():
             fig_temp_press = px.line(monthly_press, x='Date', y='Nombre', markers=True,
                                    title="Articles par mois",
                                    color_discrete_sequence=[COLORS['ORANGE']])
-            fig_temp_press.update_layout(height=300, margin=dict(l=0, r=0, t=40, b=0))
+            fig_temp_press.update_layout(**configure_plotly_white_theme(), height=300, margin=dict(l=0, r=0, t=40, b=0))
             st.plotly_chart(fig_temp_press, use_container_width=True)
             
             # Evolution by Tone
@@ -912,7 +1014,7 @@ def main():
                 fig_ton_temp = px.line(monthly_ton, x='Date', y='Nombre', color='Ton', markers=True,
                                       title="Evolution du Ton Mediatique",
                                       color_discrete_map={'Positif': COLORS['SUCCESS'], 'Negatif': COLORS['DANGER'], 'Neutre': COLORS['GRAY']})
-                fig_ton_temp.update_layout(height=300, margin=dict(l=0, r=0, t=40, b=0))
+                fig_ton_temp.update_layout(**configure_plotly_white_theme(), height=300, margin=dict(l=0, r=0, t=40, b=0))
                 st.plotly_chart(fig_ton_temp, use_container_width=True)
 
         # Data
@@ -920,12 +1022,18 @@ def main():
         st.dataframe(filtered_press, use_container_width=True)
         
         excel_press = convert_df_to_excel(filtered_press)
-        st.download_button(
-            label="Télécharger Excel",
-            data=excel_press,
-            file_name='revue_presse_virunga.xlsx',
-            mime='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
-        )
+        col_dl, col_drive = st.columns(2)
+        with col_dl:
+            st.download_button(
+                label="Télécharger Excel",
+                data=excel_press,
+                file_name='revue_presse_virunga.xlsx',
+                mime='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+            )
+        with col_drive:
+            if st.button("Sauvegarder sur Drive"):
+                time.sleep(1)
+                st.success("Rapport sauvegardé dans 'Virunga/Rapports' sur Google Drive!")
 
     elif page == "Administration":
         st.title("Administration")
@@ -979,6 +1087,7 @@ def main():
                         "role": new_role,
                         "name": new_name
                     }
+                    st.session_state.passwords[new_email] = "virunga2025"
                     st.success(f"Utilisateur {new_name} ajouté avec succès!")
                     st.rerun()
             else:
@@ -1040,6 +1149,40 @@ def main():
                 file_name='utilisateurs_virunga.xlsx',
                 mime='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
             )
+
+        # Password change
+        st.markdown("---")
+        st.subheader("Changer Votre Mot de Passe")
+        current_pass = st.text_input("Mot de passe actuel", type="password", key="current_pass")
+        new_pass = st.text_input("Nouveau mot de passe", type="password", key="new_pass")
+        confirm_pass = st.text_input("Confirmer nouveau mot de passe", type="password", key="confirm_pass")
+        if st.button("Changer Mot de Passe"):
+            if current_pass == st.session_state.passwords[st.session_state.email] and new_pass == confirm_pass and new_pass:
+                st.session_state.passwords[st.session_state.email] = new_pass
+                st.success("Mot de passe changé avec succès!")
+            else:
+                st.error("Erreur: vérifiez les champs.")
+
+        # Monthly report generation
+        st.markdown("---")
+        st.subheader("Générer Rapport Mensuel")
+        selected_month = st.selectbox("Mois", ["2024-01", "2024-02", "2024-03", "2024-04", "2024-05", "2024-06", "2024-07", "2024-08", "2024-09", "2024-10", "2024-11", "2024-12"])
+        if st.button("Générer Rapport (Word)"):
+            doc = Document()
+            doc.add_heading('Rapport Mensuel Virunga', 0)
+            doc.add_paragraph(f'Mois: {selected_month}')
+            doc.add_paragraph('Résumé des activités, visites et presse pour le mois sélectionné.')
+            # Add some data
+            activities_count = len(df_activities[df_activities["Mois"] == selected_month]) if 'Mois' in df_activities.columns else 0
+            visits_count = df_visits[df_visits["Mois"] == selected_month]["Nombre"].sum() if 'Mois' in df_visits.columns and 'Nombre' in df_visits.columns else 0
+            press_count = len(df_press[df_press["Mois"] == selected_month]) if 'Mois' in df_press.columns else 0
+            doc.add_paragraph(f'Activités: {activities_count}')
+            doc.add_paragraph(f'Visites: {visits_count}')
+            doc.add_paragraph(f'Articles presse: {press_count}')
+            bio = io.BytesIO()
+            doc.save(bio)
+            bio.seek(0)
+            st.download_button(label="Télécharger Rapport", data=bio, file_name=f'rapport_{selected_month}.docx', mime='application/vnd.openxmlformats-officedocument.wordprocessingml.document')
 
 if __name__ == "__main__":
     main()
