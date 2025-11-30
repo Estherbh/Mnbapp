@@ -5,6 +5,8 @@ import os
 from datetime import datetime, timedelta
 import re
 import time
+import secrets
+import string
 
 USERS_FILE = "users.json"
 MAX_LOGIN_ATTEMPTS = 5
@@ -104,15 +106,50 @@ class SecureAuthManager:
             return True, "Mot de passe modifié avec succès."
         else:
             return False, "Erreur lors de la sauvegarde."
+    
+    def generate_temporary_password(self, length=12):
+        """Generate a secure temporary password"""
+        alphabet = string.ascii_letters + string.digits + "!@#$%^&*"
+        password = ''.join(secrets.choice(alphabet) for i in range(length))
+        # Ensure it meets requirements
+        if (any(c.isupper() for c in password) and 
+            any(c.isdigit() for c in password) and 
+            any(c in "!@#$%^&*(),.?\":{}|<>" for c in password)):
+            return password
+        # Retry if requirements not met
+        return self.generate_temporary_password(length)
+    
+    def reset_password_request(self, email):
+        """Reset password for a user and generate temporary password"""
+        user = self.users.get(email)
+        if not user:
+            return False, "Email non trouvé.", None
+        
+        # Generate temporary password
+        temp_password = self.generate_temporary_password()
+        
+        # Hash and save
+        user['password_hash'] = self.hash_password(temp_password)
+        user['must_change_password'] = True
+        self.users[email] = user
+        
+        if self.save_users():
+            return True, "Mot de passe réinitialisé avec succès.", temp_password
+        else:
+            return False, "Erreur lors de la sauvegarde.", None
 
     def login_form(self):
         # Center the logo with smaller size
-        col_logo1, col_logo2, col_logo3 = st.columns([1,2,1])
-        with col_logo2:
-            try:
-                st.image("VNP LOGO FRENCH.jpg", width=200)
-            except:
-                pass
+        st.markdown("""
+            <div style='text-align: center;'>
+        """, unsafe_allow_html=True)
+        
+        try:
+            st.image("VNP LOGO FRENCH.jpg", width=200)
+        except:
+            pass
+        
+        st.markdown("</div>", unsafe_allow_html=True)
         
         st.markdown(f"""
             <div style='text-align: center; padding: 30px;'>
@@ -122,11 +159,43 @@ class SecureAuthManager:
         
         col1, col2, col3 = st.columns([1,2,1])
         with col2:
-            with st.form("login_form"):
-                email = st.text_input("Email Professionnel")
-                password = st.text_input("Mot de passe", type="password")
-                submit = st.form_submit_button("Connexion Sécurisée")
-                
-                if submit:
-                    if self.check_login(email.strip(), password.strip()):
+            # Show forgot password form if requested
+            if 'show_forgot_password' not in st.session_state:
+                st.session_state.show_forgot_password = False
+            
+            if st.session_state.show_forgot_password:
+                st.subheader("Réinitialisation du mot de passe")
+                with st.form("forgot_password_form"):
+                    reset_email = st.text_input("Email professionnel")
+                    submit_reset = st.form_submit_button("Réinitialiser")
+                    cancel_reset = st.form_submit_button("Annuler")
+                    
+                    if submit_reset and reset_email:
+                        success, msg, temp_pwd = self.reset_password_request(reset_email.strip())
+                        if success:
+                            st.success(msg)
+                            st.info(f"**Mot de passe temporaire** : `{temp_pwd}`")
+                            st.warning("⚠️ Copiez ce mot de passe maintenant. Vous devrez le changer à la première connexion.")
+                            time.sleep(5)
+                            st.session_state.show_forgot_password = False
+                            st.rerun()
+                        else:
+                            st.error(msg)
+                    
+                    if cancel_reset:
+                        st.session_state.show_forgot_password = False
                         st.rerun()
+            else:
+                with st.form("login_form"):
+                    email = st.text_input("Email Professionnel")
+                    password = st.text_input("Mot de passe", type="password")
+                    submit = st.form_submit_button("Connexion Sécurisée")
+                    
+                    if submit:
+                        if self.check_login(email.strip(), password.strip()):
+                            st.rerun()
+                
+                # Forgot password link
+                if st.button("Mot de passe oublié ?", key="forgot_pwd_btn"):
+                    st.session_state.show_forgot_password = True
+                    st.rerun()
