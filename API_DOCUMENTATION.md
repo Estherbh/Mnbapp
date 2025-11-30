@@ -370,26 +370,44 @@ CMD ["streamlit", "run", "virunga_app.py", "--server.port=8501", "--server.addre
 - `STREAMLIT_SERVER_ADDRESS` : Adresse du serveur (défaut : localhost)
 - `GOOGLE_APPLICATION_CREDENTIALS` : Chemin vers les credentials Google Drive
 
-## API Endpoints (Streamlit)
+## API REST (Nouveau)
+L'application expose désormais une API REST complète via `api.py` (FastAPI).
 
-Streamlit ne fournit pas d'API REST traditionnelle, mais l'application expose les fonctionnalités suivantes :
+### Lancement de l'API
+```bash
+uvicorn api:app --reload
+```
+L'API sera accessible sur `http://localhost:8000`. Documentation automatique sur `http://localhost:8000/docs`.
 
-### Authentification
-- **Méthode** : `SecureAuthManager.check_login(email, password)`
-- **Retour** : `bool` - True si authentifié
+### Endpoints Disponibles
 
-### Chargement de Données
-- **Méthode** : `load_data_optimized()`
-- **Retour** : `Tuple[DataFrame, DataFrame, DataFrame]` - (activités, visites, presse)
-- **Cache** : 4 heures (TTL)
+#### Authentification
+L'API utilise l'authentification Basic Auth avec les mêmes identifiants que l'application web.
 
-### Analyse IA
-- **Méthode** : `VirungaIntelligence.cluster_activities(df)`
-- **Retour** : `Tuple[DataFrame, float]` - (données clustérisées, score silhouette)
+#### 1. Activités Terrain
+- **GET** `/activities`
+- **Description** : Récupère toutes les activités terrain.
+- **Réponse** : Liste d'objets JSON (Date, Nom, Organisateur, Type, etc.)
 
-### Changement de Mot de Passe
-- **Méthode** : `SecureAuthManager.change_password(email, old_pwd, new_pwd)`
-- **Retour** : `Tuple[bool, str]` - (succès, message)
+#### 2. Visites & Stages
+- **GET** `/visits`
+- **Description** : Récupère toutes les visites et stages.
+- **Réponse** : Liste d'objets JSON (Date, Nombre, Objet, Organisation)
+
+#### 3. Revue de Presse
+- **GET** `/press`
+- **Description** : Récupère les articles de presse.
+- **Réponse** : Liste d'objets JSON (Date, Media, Titre, Ton, etc.)
+
+#### 4. Statistiques Globales
+- **GET** `/stats`
+- **Description** : Renvoie les totaux (activités, visites, articles).
+
+## Optimisation Mobile
+L'application a été optimisée pour les smartphones :
+- **Design Responsive** : Les graphiques et tableaux s'adaptent à la largeur de l'écran.
+- **CSS Mobile** : Ajustement automatique des tailles de police et des marges sur les petits écrans (< 768px).
+- **Navigation** : Menu latéral repliable adapté au tactile.
 
 ## Maintenance et Monitoring
 
@@ -423,6 +441,8 @@ Pour toute question ou problème :
 ## Changelog
 
 ### Version Actuelle
+- ✅ **API REST** : Endpoints pour l'accès aux données externes
+- ✅ **Mobile Ready** : Optimisation CSS pour smartphones
 - ✅ Titre de connexion : "Relations Extérieures / PNVi"
 - ✅ Changement de mot de passe dans la page "Profil"
 - ✅ Authentification sécurisée avec bcrypt
