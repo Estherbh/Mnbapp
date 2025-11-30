@@ -34,7 +34,7 @@ COLORS = {
 
 # Page Configuration
 st.set_page_config(
-    page_title="Virunga Intelligent Dashboard",
+    page_title="Relations Extérieures / PNVi",
     page_icon="VNP LOGO FRENCH.jpg",
     layout="wide",
     initial_sidebar_state="expanded"
@@ -132,7 +132,7 @@ def load_data_optimized():
     """
     Loads data efficiently with caching using the core data manager.
     """
-    with st.spinner("⚡ Chargement des données en cours..."):
+    with st.spinner(" Chargement des données en cours..."):
         return load_data_core()
 
 # --- AUTHENTICATION MANAGER ---
@@ -962,7 +962,7 @@ def main():
         if 'all_users' not in st.session_state:
             st.session_state.all_users = {
                 "bbwende@virunga.org": {"role": "owner", "name": "Bienvenu Bwende"},
-                "admin@virunga.org": {"role": "admin", "name": "Admin System"},
+                "muhoze@virunga.org": {"role": "admin", "name": "Methode Uhoze"},
                 "guest@virunga.org": {"role": "viewer", "name": "Invité"}
             }
         
