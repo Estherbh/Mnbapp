@@ -30,7 +30,7 @@ COLORS = {
 
 # Page Configuration
 st.set_page_config(
-    page_title="Virunga Intelligent Dashboard",
+    page_title="Relations Extérieures / PNVi",
     page_icon="VNP LOGO FRENCH.jpg",
     layout="wide",
     initial_sidebar_state="expanded"
@@ -277,7 +277,7 @@ class AuthManager:
         return True
 
 # --- INTELLIGENCE ENGINE (ML & ANALYTICS) ---
-class VirungaIntelligence:
+class Relations Extérieures / PNVi:
     def __init__(self):
         pass
 
@@ -468,7 +468,7 @@ def main():
     # Load Data
     # Load Data Optimized
     df_activities, df_visits, df_press = load_data_optimized()
-    intelligence = VirungaIntelligence()
+    intelligence = RelationsExtérieuresPNVi()
 
     if page == "Vue d'ensemble":
         st.title("Tableau de Bord Exécutif")
@@ -793,7 +793,7 @@ def main():
         )
 
     elif page == "Revue de Presse":
-        st.title("Intelligence Media")
+        st.title("Media")
         
         # Filters
         with st.expander("Filtres Presse", expanded=True):
