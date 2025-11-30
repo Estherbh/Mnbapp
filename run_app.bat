@@ -1,4 +1,6 @@
 @echo off
+echo Installation des dependances...
+".conda\python.exe" -m pip install -r requirements.txt
 echo Lancement du Dashboard Virunga...
 ".conda\python.exe" -m streamlit run virunga_app.py
 pause

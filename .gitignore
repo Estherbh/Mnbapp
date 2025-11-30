@@ -19,26 +19,53 @@ wheels/
 *.egg-info/
 .installed.cfg
 *.egg
-MANIFEST
 
-# Virtual Env
-venv/
-env/
-ENV/
-.env
+# Virtual Environment
 .venv/
+venv/
+ENV/
+env/
 .conda/
 
 # Streamlit
 .streamlit/
 
+# Sensitive Files
+client_secret.json
+token.pickle
+config.json
+users.json
+*.env
+.env
+
 # IDE
 .vscode/
 .idea/
+*.swp
+*.swo
+*~
 
 # OS
 .DS_Store
 Thumbs.db
 
-# Excel temp files
-~$*.xlsx
+# Logs
+*.log
+
+# Temporary files
+*.tmp
+*.bak
+*.backup
+*~
+
+# Data files (optional - uncomment if you don't want to track data)
+# *.xlsx
+# *.xls
+# *.csv
+
+# Jupyter Notebook
+.ipynb_checkpoints
+*.ipynb
+
+# Text files
+activation de l environment virtuel*.txt
