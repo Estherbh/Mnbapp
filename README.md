@@ -95,20 +95,36 @@ Placez ces fichiers dans le répertoire principal :
 
 ## 🌐 Déploiement
 
-Voir [API_DOCUMENTATION.md](API_DOCUMENTATION.md) pour les instructions détaillées de déploiement sur :
-- Streamlit Cloud (recommandé)
-- Google Cloud Platform
-- Heroku
-- Docker
+### Déploiement sur Google Cloud Platform (Recommandé)
 
-### Déploiement Rapide sur Streamlit Cloud
+**Guide Rapide (5 minutes)** : Voir [DEPLOIEMENT_RAPIDE.md](DEPLOIEMENT_RAPIDE.md)
 
-1. Pusher le code sur GitHub
-2. Connecter le repository sur [streamlit.io/cloud](https://streamlit.io/cloud)
-3. Configurer :
-   - Main file : `virunga_app.py`
-   - Python version : 3.9
-4. Ajouter les fichiers de données et `users.json` manuellement
+**Guide Complet** : Voir [GUIDE_DEPLOIEMENT_GCP.md](GUIDE_DEPLOIEMENT_GCP.md)
+
+**Résumé** : Voir [RESUME_DEPLOIEMENT.md](RESUME_DEPLOIEMENT.md)
+
+#### Déploiement Automatique
+```bash
+# Dans Google Cloud Shell
+bash deploy.sh
+```
+
+#### Déploiement Manuel
+```bash
+# 1. Vérifier les fichiers
+python3 check_deployment.py
+
+# 2. Déployer
+gcloud app deploy
+
+# 3. Accéder
+gcloud app browse
+```
+
+### Autres Options
+- Streamlit Cloud : Voir [API_DOCUMENTATION.md](API_DOCUMENTATION.md)
+- Docker : Voir [Dockerfile](Dockerfile)
+- Heroku : Voir [API_DOCUMENTATION.md](API_DOCUMENTATION.md)
 
 ## 📚 Documentation
 

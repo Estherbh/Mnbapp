@@ -1,0 +1,25 @@
+{
+  "users": [
+    {
+      "email": "bbwende@virunga.org",
+      "password_hash": "$2b$12$REMPLACEZ_PAR_VOTRE_HASH_GENERE",
+      "name": "Bienvenu Bwende",
+      "role": "owner",
+      "must_change_password": false
+    },
+    {
+      "email": "admin@virunga.org",
+      "password_hash": "$2b$12$REMPLACEZ_PAR_VOTRE_HASH_GENERE",
+      "name": "Administrateur",
+      "role": "admin",
+      "must_change_password": true
+    },
+    {
+      "email": "viewer@virunga.org",
+      "password_hash": "$2b$12$REMPLACEZ_PAR_VOTRE_HASH_GENERE",
+      "name": "Invité",
+      "role": "viewer",
+      "must_change_password": false
+    }
+  ]
+}

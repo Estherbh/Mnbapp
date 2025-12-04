@@ -26,8 +26,8 @@ git clone https://github.com/Estherbh/Mnbapp.git
 # 2. Entrer dans le dossier
 cd Mnbapp
 
-# 3. Basculer sur la bonne branche
-git checkout blackboxai/enhance-dashboard-features
+# 3. S'assurer d'être sur la branche principale
+git checkout main
 ```
 
 ## Étape 4 : Ajouter les Fichiers Manquants

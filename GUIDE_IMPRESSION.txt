@@ -1,0 +1,328 @@
+================================================================================
+                    GUIDE DE DEPLOIEMENT GCP - VERSION IMPRIMABLE
+                              Virunga Dashboard
+================================================================================
+
+ETAPE 1 : CREER UN PROJET GCP
+================================================================================
+
+1. Ouvrir : https://console.cloud.google.com/
+
+2. Cliquer sur "Selectionner un projet" en haut
+
+3. Cliquer sur "Nouveau projet"
+
+4. Nom du projet : virunga-dashboard
+
+5. Cliquer sur "Creer"
+
+6. Attendre la creation (30 secondes)
+
+
+ETAPE 2 : ACTIVER LA FACTURATION
+================================================================================
+
+1. Menu (☰) → Facturation
+
+2. Cliquer sur "Associer un compte de facturation"
+
+3. Entrer les informations de carte bancaire
+
+4. Valider (300$ de credit gratuit pendant 90 jours)
+
+
+ETAPE 3 : INITIALISER APP ENGINE
+================================================================================
+
+1. Menu (☰) → App Engine
+
+2. Cliquer sur "Creer une application"
+
+3. Region : europe-west1 (Belgique)
+
+4. Cliquer sur "Suivant"
+
+5. Attendre l'initialisation (1-2 minutes)
+
+
+ETAPE 4 : OUVRIR CLOUD SHELL
+================================================================================
+
+1. En haut a droite, cliquer sur l'icone Cloud Shell (>_)
+
+2. Un terminal s'ouvre en bas de l'ecran
+
+3. Attendre qu'il soit pret (vous verrez votre nom d'utilisateur)
+
+
+ETAPE 5 : CLONER LE CODE
+================================================================================
+
+Dans le terminal Cloud Shell, taper :
+
+    git clone https://github.com/Estherbh/Mnbapp.git
+
+Appuyer sur Entree
+
+Attendre le telechargement (30 secondes)
+
+Puis taper :
+
+    cd Mnbapp
+
+Appuyer sur Entree
+
+
+ETAPE 6 : CREER users.json
+================================================================================
+
+Dans le terminal, taper :
+
+    nano users.json
+
+Appuyer sur Entree
+
+Copier-coller ce contenu (modifier avec vos infos) :
+
+{
+  "users": [
+    {
+      "email": "votre.email@virunga.org",
+      "password_hash": "$2b$12$VOTRE_HASH_ICI",
+      "name": "Votre Nom",
+      "role": "owner",
+      "must_change_password": false
+    }
+  ]
+}
+
+Pour sauvegarder :
+- Appuyer sur Ctrl+O
+- Appuyer sur Entree
+- Appuyer sur Ctrl+X
+
+
+ETAPE 7 : GENERER LE HASH DU MOT DE PASSE
+================================================================================
+
+Dans le terminal, taper :
+
+    python3 generate_hash.py
+
+Appuyer sur Entree
+
+Entrer votre mot de passe (minimum 8 caracteres, 1 majuscule, 1 chiffre, 
+1 caractere special)
+
+Confirmer le mot de passe
+
+Copier le hash genere (commence par $2b$12$...)
+
+Ouvrir users.json :
+
+    nano users.json
+
+Remplacer "$2b$12$VOTRE_HASH_ICI" par le hash copie
+
+Sauvegarder : Ctrl+O, Entree, Ctrl+X
+
+
+ETAPE 8 : UPLOADER LES FICHIERS EXCEL
+================================================================================
+
+1. Dans Cloud Shell, cliquer sur les trois points (⋮) en haut
+
+2. Cliquer sur "Upload"
+
+3. Selectionner ces fichiers sur votre ordinateur :
+   - COLLECTE DES DONNEES TERRAIN_RELATIONS EXTERIEURES (2).xlsx
+   - Revue de la presse2.xlsx
+   - VNP LOGO FRENCH.jpg
+
+4. Attendre l'upload (1-2 minutes)
+
+5. Verifier que les fichiers sont presents :
+
+    ls -lh
+
+   Vous devez voir les 3 fichiers
+
+
+ETAPE 9 : VERIFIER
+================================================================================
+
+Dans le terminal, taper :
+
+    python3 check_deployment.py
+
+Appuyer sur Entree
+
+Vous devez voir : "TOUT EST PRET POUR LE DEPLOIEMENT !"
+
+Si vous voyez des erreurs, verifier les etapes precedentes
+
+
+ETAPE 10 : DEPLOYER
+================================================================================
+
+Dans le terminal, taper :
+
+    gcloud app deploy
+
+Appuyer sur Entree
+
+Repondre "Y" quand demande
+
+Attendre 5-10 minutes (ne pas fermer le terminal)
+
+Vous verrez :
+- Uploading files... 100%
+- Building container... 100%
+- Deploying... 100%
+- Deployed service [default]
+
+
+ETAPE 11 : OBTENIR L'URL
+================================================================================
+
+Dans le terminal, taper :
+
+    gcloud app browse
+
+Appuyer sur Entree
+
+Copier l'URL affichee (ex: https://virunga-dashboard.ew.r.appspot.com)
+
+Ouvrir cette URL dans votre navigateur
+
+
+ETAPE 12 : TESTER
+================================================================================
+
+1. La page de connexion s'affiche
+
+2. Entrer votre email et mot de passe
+
+3. Cliquer sur "Connexion Securisee"
+
+4. Le dashboard s'affiche
+
+5. Verifier que les donnees sont presentes
+
+6. Tester les differentes pages
+
+
+FELICITATIONS ! VOTRE APPLICATION EST EN LIGNE !
+================================================================================
+
+
+COMMANDES UTILES
+================================================================================
+
+Voir les logs en temps reel :
+    gcloud app logs tail -s default
+
+Ouvrir l'application :
+    gcloud app browse
+
+Voir les versions deployees :
+    gcloud app versions list
+
+Mettre a jour l'application :
+    gcloud app deploy
+
+
+COUTS ESTIMES
+================================================================================
+
+Gratuit pendant 90 jours (300$ de credit)
+
+Apres les 90 jours :
+- Environ 5-15$ par mois
+- Depend de l'utilisation
+- L'app s'arrete automatiquement si pas d'utilisation
+
+
+SUPPORT
+================================================================================
+
+Email : bbwende@virunga.org
+
+Documentation complete : Voir les fichiers .md dans le projet
+
+Documentation GCP : https://cloud.google.com/appengine/docs
+
+
+NOTES IMPORTANTES
+================================================================================
+
+1. NE JAMAIS commiter users.json sur GitHub
+
+2. Surveiller les couts dans le dashboard GCP
+
+3. Configurer des alertes budget
+
+4. Sauvegarder regulierement les donnees
+
+5. Mettre a jour l'application regulierement
+
+
+DEPANNAGE
+================================================================================
+
+Erreur "API not enabled" :
+    gcloud services enable appengine.googleapis.com
+    gcloud services enable cloudbuild.googleapis.com
+
+Erreur "Module not found" :
+    Verifier requirements.txt
+
+L'app ne demarre pas :
+    gcloud app logs tail -s default
+
+Erreur de memoire :
+    Augmenter instance_class dans app.yaml
+
+
+CHECKLIST FINALE
+================================================================================
+
+[ ] Compte GCP cree
+[ ] Projet cree (virunga-dashboard)
+[ ] Facturation activee
+[ ] App Engine initialise
+[ ] Cloud Shell ouvert
+[ ] Code clone
+[ ] users.json cree avec hash valide
+[ ] Fichiers Excel uploades
+[ ] Logo uploade
+[ ] Verification reussie (check_deployment.py)
+[ ] Deploiement reussi (gcloud app deploy)
+[ ] URL obtenue
+[ ] Application testee
+[ ] Connexion reussie
+[ ] Donnees visibles
+
+
+PROCHAINES ETAPES
+================================================================================
+
+1. Creer les comptes utilisateurs supplementaires
+2. Uploader toutes les donnees
+3. Configurer le monitoring
+4. Former l'equipe
+5. Partager l'URL
+
+
+================================================================================
+                              FIN DU GUIDE
+================================================================================
+
+Pour plus de details, consultez :
+- START_HERE.md
+- GUIDE_DEPLOIEMENT_GCP.md
+- INDEX_DOCUMENTATION.md
+
+Bonne chance !
+
+================================================================================
