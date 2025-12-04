@@ -5,11 +5,11 @@ import io
 from google_auth_oauthlib.flow import InstalledAppFlow
 from google.auth.transport.requests import Request
 from googleapiclient.discovery import build
-from googleapiclient.http import MediaIoBaseDownload
+from googleapiclient.http import MediaIoBaseDownload, MediaFileUpload
 import streamlit as st
 from datetime import datetime
 
-SCOPES = ['https://www.googleapis.com/auth/drive.readonly']
+SCOPES = ['https://www.googleapis.com/auth/drive']
 CLIENT_SECRET_FILE = 'client_secret.json'
 TOKEN_FILE = 'token.pickle'
 CONFIG_FILE = 'config.json'
@@ -117,3 +117,20 @@ class DriveManager:
             
         except Exception as e:
             return False, f"Erreur de synchronisation: {e}"
+
+    def upload_file(self, file_path, folder_id=None):
+        """Uploads a file to Google Drive."""
+        if not self.service:
+            return False, "Non authentifié."
+        
+        try:
+            file_metadata = {'name': os.path.basename(file_path)}
+            if folder_id:
+                file_metadata['parents'] = [folder_id]
+            
+            media = MediaFileUpload(file_path, resumable=True)
+            
+            file = self.service.files().create(body=file_metadata, media_body=media, fields='id').execute()
+            return True, f"Fichier uploadé avec succès (ID: {file.get('id')})"
+        except Exception as e:
+            return False, f"Erreur d'upload: {e}"

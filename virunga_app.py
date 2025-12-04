@@ -1,4 +1,5 @@
 ﻿import streamlit as st
+import os
 import pandas as pd
 import numpy as np
 import plotly.express as px
@@ -629,9 +630,24 @@ def main():
             )
         with col_drive:
             if st.button("Sauvegarder sur Drive"):
-                # Mock Drive Save
-                time.sleep(1)
-                st.success("Rapport sauvegardé dans 'Virunga/Rapports' sur Google Drive!")
+                with st.spinner("Sauvegarde en cours..."):
+                    # Generate Excel file locally first
+                    excel_data = convert_df_to_excel(filtered_df)
+                    temp_filename = "activites_virunga_temp.xlsx"
+                    with open(temp_filename, "wb") as f:
+                        f.write(excel_data)
+                    
+                    # Upload
+                    success, msg = drive_mgr.upload_file(temp_filename, drive_mgr.config.get('drive_folder_id'))
+                    
+                    # Clean up
+                    if os.path.exists(temp_filename):
+                        os.remove(temp_filename)
+                        
+                    if success:
+                        st.success(msg)
+                    else:
+                        st.error(msg)
 
     elif page == "Visites & Stages":
         st.title("Suivi des Visites et Stages")
