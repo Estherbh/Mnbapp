@@ -145,7 +145,7 @@ class SecureAuthManager:
         c1, c2, c3 = st.columns([1,1,1])
         with c2:
             try:
-                st.image("VNP LOGO FRENCH.jpg", use_column_width=True)
+                st.image("VNP LOGO FRENCH.jpg", width=180)
             except:
                 pass
         
