@@ -1,0 +1,22 @@
+[server]
+headless = true
+port = 8080
+enableCORS = false
+enableXsrfProtection = true
+maxUploadSize = 50
+runOnSave = false
+
+[browser]
+gatherUsageStats = false
+serverAddress = "0.0.0.0"
+
+[runner]
+fastReruns = true
+magicEnabled = false
+
+[theme]
+primaryColor = "#EF7D00"
+backgroundColor = "#F8F9FA"
+secondaryBackgroundColor = "#FFFFFF"
+textColor = "#2C3E50"
+font = "sans serif"
