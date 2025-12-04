@@ -33,37 +33,39 @@ class DriveManager:
 
     def authenticate(self, allow_browser=True):
         """Authenticates the user with Google Drive API."""
-        if os.path.exists(TOKEN_FILE):
-            with open(TOKEN_FILE, 'rb') as token:
-                self.creds = pickle.load(token)
-        
-        if not self.creds or not self.creds.valid:
-            if self.creds and self.creds.expired and self.creds.refresh_token:
-                try:
-                    self.creds.refresh(Request())
-                except Exception:
-                    self.creds = None
+        try:
+            if os.path.exists(TOKEN_FILE):
+                with open(TOKEN_FILE, 'rb') as token:
+                    self.creds = pickle.load(token)
             
-            if not self.creds and allow_browser:
-                if os.path.exists(CLIENT_SECRET_FILE):
+            if not self.creds or not self.creds.valid:
+                if self.creds and self.creds.expired and self.creds.refresh_token:
                     try:
+                        self.creds.refresh(Request())
+                    except Exception:
+                        self.creds = None
+                
+                if not self.creds and allow_browser:
+                    if os.path.exists(CLIENT_SECRET_FILE):
                         flow = InstalledAppFlow.from_client_secrets_file(CLIENT_SECRET_FILE, SCOPES)
-                        # Use port 8502 to avoid conflict with Streamlit (running on 8501)
-                        self.creds = flow.run_local_server(
-                            port=8502,
-                            success_message="Authentification réussie ! Vous pouvez fermer cet onglet et retourner sur l'application Virunga."
-                        )
-                        with open(TOKEN_FILE, 'wb') as token:
-                            pickle.dump(self.creds, token)
-                    except Exception as e:
-                        st.error(f"Erreur d'authentification Drive: {e}")
-                        return
+                        ports = [8502, 8503, 8504, 8505, 9000, 9001]
+                        for port in ports:
+                            try:
+                                self.creds = flow.run_local_server(
+                                    port=port,
+                                    success_message="Authentification réussie ! Fermez cet onglet."
+                                )
+                                with open(TOKEN_FILE, 'wb') as token:
+                                    pickle.dump(self.creds, token)
+                                break
+                            except OSError:
+                                continue
 
-        if self.creds:
-            try:
+            if self.creds:
                 self.service = build('drive', 'v3', credentials=self.creds)
-            except Exception as e:
-                st.error(f"Erreur de connexion au service Drive: {e}")
+        except Exception as e:
+            if allow_browser:
+                st.error(f"Erreur Drive: {e}")
 
     def list_folders(self):
         """Lists folders in the root directory."""
@@ -91,16 +93,18 @@ class DriveManager:
         if not folder_id:
             return False, "Aucun dossier configuré."
 
-        files_to_sync = self.config.get('data_files', {}).values()
+        expected_files = [
+            "COLLECTE DES DONNÉES TERRAIN_RELATIONS EXTERIEURES (2).xlsx",
+            "Revue de la presse2.xlsx"
+        ]
         synced_count = 0
         
         try:
-            # List files in the specific folder
             query = f"'{folder_id}' in parents and trashed=false"
             results = self.service.files().list(q=query, fields="files(id, name)").execute()
             drive_files = {f['name']: f['id'] for f in results.get('files', [])}
             
-            for target_filename in files_to_sync:
+            for target_filename in expected_files:
                 if target_filename in drive_files:
                     file_id = drive_files[target_filename]
                     request = self.service.files().get_media(fileId=file_id)
@@ -109,6 +113,7 @@ class DriveManager:
                     done = False
                     while done is False:
                         status, done = downloader.next_chunk()
+                    fh.close()
                     synced_count += 1
             
             self.config['last_sync'] = datetime.now().isoformat()
@@ -116,7 +121,7 @@ class DriveManager:
             return True, f"Synchronisation réussie ({synced_count} fichiers)."
             
         except Exception as e:
-            return False, f"Erreur de synchronisation: {e}"
+            return False, f"Erreur: {e}"
 
     def upload_file(self, file_path, folder_id=None):
         """Uploads a file to Google Drive."""

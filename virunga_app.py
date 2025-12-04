@@ -84,6 +84,12 @@ st.markdown(f"""
     section[data-testid="stSidebar"] {{
         background-color: {COLORS['DARK_HEADER']};
     }}
+    section[data-testid="stSidebar"] label,
+    section[data-testid="stSidebar"] p,
+    section[data-testid="stSidebar"] span,
+    section[data-testid="stSidebar"] div {{
+        color: white !important;
+    }}
     
     /* Buttons */
     .stButton>button {{
@@ -127,14 +133,12 @@ st.markdown(f"""
 """, unsafe_allow_html=True)
 
 # --- DATA LOADER ---
-# --- DATA LOADER OPTIMIZED ---
-@st.cache_data(ttl=14400) # Increased to 4 hours
+@st.cache_data(ttl=3600, show_spinner=False)
 def load_data_optimized():
     """
-    Loads data efficiently with caching using the core data manager.
+    Loads data efficiently with caching.
     """
-    with st.spinner(" Chargement des données en cours..."):
-        return load_data_core()
+    return load_data_core()
 
 # --- AUTHENTICATION MANAGER ---
 # Replaced by auth_manager.py
@@ -344,15 +348,6 @@ def main():
 
     page = render_sidebar()
     
-    # Load Data
-    # Automatic Sync Check
-    drive_mgr = DriveManager()
-    if drive_mgr.config.get('drive_folder_id'):
-        last_sync = drive_mgr.config.get('last_sync')
-        if not last_sync or (datetime.now() - datetime.fromisoformat(last_sync)) > timedelta(minutes=60):
-            with st.spinner("Synchronisation automatique avec Google Drive..."):
-                drive_mgr.sync_data()
-
     # Load Data Optimized
     df_activities, df_visits, df_press = load_data_optimized()
     intelligence = VirungaIntelligence()
@@ -429,7 +424,7 @@ def main():
         # --- KPIS ---
         st.markdown("### Indicateurs Clés")
         total_act = len(filtered_df)
-        total_part = int(filtered_df['Hommes'].sum() + filtered_df['Femmes'].sum()) if 'Hommes' in filtered_df.columns else 0
+        total_part = int(filtered_df['Hommes'].sum() + filtered_df['Femmes'].sum() + filtered_df['Enfants'].sum()) if all(c in filtered_df.columns for c in ['Hommes', 'Femmes', 'Enfants']) else 0
         
         # Count unique locations (sectors + precise locations)
         unique_sectors = filtered_df['Secteur'].nunique() if 'Secteur' in filtered_df.columns else 0
@@ -630,17 +625,15 @@ def main():
             )
         with col_drive:
             if st.button("Sauvegarder sur Drive"):
+                drive_mgr = DriveManager()
                 with st.spinner("Sauvegarde en cours..."):
-                    # Generate Excel file locally first
                     excel_data = convert_df_to_excel(filtered_df)
                     temp_filename = "activites_virunga_temp.xlsx"
                     with open(temp_filename, "wb") as f:
                         f.write(excel_data)
                     
-                    # Upload
                     success, msg = drive_mgr.upload_file(temp_filename, drive_mgr.config.get('drive_folder_id'))
                     
-                    # Clean up
                     if os.path.exists(temp_filename):
                         os.remove(temp_filename)
                         

@@ -139,24 +139,23 @@ class SecureAuthManager:
             return False, "Erreur lors de la sauvegarde.", None
 
     def login_form(self):
-        # Center the logo with smaller size
+        st.markdown("<br>", unsafe_allow_html=True)
+        
+        # Center logo
+        c1, c2, c3 = st.columns([1,1,1])
+        with c2:
+            try:
+                st.image("VNP LOGO FRENCH.jpg", use_column_width=True)
+            except:
+                pass
+        
         st.markdown("""
-            <div style='text-align: center;'>
-        """, unsafe_allow_html=True)
-        
-        try:
-            st.image("VNP LOGO FRENCH.jpg", width=200)
-        except:
-            pass
-        
-        st.markdown("</div>", unsafe_allow_html=True)
-        
-        st.markdown(f"""
-            <div style='text-align: center; padding: 30px;'>
+            <div style='text-align: center; padding: 20px;'>
                 <h1 style='color:#00A87D'>Relations Extérieures / PNVi</h1>
             </div>
         """, unsafe_allow_html=True)
         
+        # Center form
         col1, col2, col3 = st.columns([1,2,1])
         with col2:
             # Show forgot password form if requested
@@ -189,13 +188,13 @@ class SecureAuthManager:
                 with st.form("login_form"):
                     email = st.text_input("Email Professionnel")
                     password = st.text_input("Mot de passe", type="password")
-                    submit = st.form_submit_button("Connexion Sécurisée")
+                    submit = st.form_submit_button("Connexion Sécurisée", use_container_width=True)
                     
                     if submit:
                         if self.check_login(email.strip(), password.strip()):
                             st.rerun()
                 
-                # Forgot password link
-                if st.button("Mot de passe oublié ?", key="forgot_pwd_btn"):
-                    st.session_state.show_forgot_password = True
-                    st.rerun()
+            # Forgot password link
+            if st.button("Mot de passe oublié ?", key="forgot_pwd_btn"):
+                st.session_state.show_forgot_password = True
+                st.rerun()

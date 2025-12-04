@@ -60,6 +60,10 @@ def load_data_core():
         
         if all(c in df_activities.columns for c in cols_num):
             df_activities['Total_Participants'] = df_activities[cols_num].sum(axis=1)
+        
+        # Remove duplicates based on key columns
+        if 'Nom' in df_activities.columns and 'Date_Activite' in df_activities.columns:
+            df_activities = df_activities.drop_duplicates(subset=['Nom', 'Date_Activite', 'Organisateur'], keep='first')
 
     except Exception as e:
         print(f"Erreur chargement Activités: {e}")
